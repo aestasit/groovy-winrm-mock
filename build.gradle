@@ -1,0 +1,53 @@
+plugins {
+
+    id 'groovy'
+    id 'maven'
+    id 'eclipse'
+    id 'idea'
+    id 'project-report'
+
+    id "net.saliman.cobertura" version "2.2.5"
+    id "com.github.hierynomus.license" version "0.11.0"
+    id "org.ajoberstar.github-pages" version "0.10.0"
+    id "org.asciidoctor.gradle.asciidoctor" version "1.5.0"
+
+}
+
+group = 'com.aestasit.infrastructure.winrm'
+version = '0.6-SNAPSHOT'
+
+apply from: 'gradle/repos.gradle'
+apply from: 'gradle/sonar.gradle'
+apply from: 'gradle/docs.gradle'
+
+dependencies {
+
+    compile "org.codehaus.groovy:groovy-all:${groovyVersion}"
+    compile "commons-io:commons-io:${commonsIOVersion}"
+    compile "org.mortbay.jetty:jetty:${jettyVersion}"
+
+    testCompile "junit:junit:${junitVersion}"
+}
+
+sourceSets {
+    integrationTest {
+        compileClasspath += main.output + test.output
+        runtimeClasspath += main.output + test.output
+    }
+}
+
+configurations {
+    all*.exclude group: 'commons-logging'
+    all*.exclude group: 'log4j'
+    all*.exclude module: 'slf4j-simple'
+    integrationTestCompile.extendsFrom testCompile
+    integrationTestRuntime.extendsFrom testRuntime
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.2'
+}
+
+license {
+    header rootProject.file('HEADER')
+}
