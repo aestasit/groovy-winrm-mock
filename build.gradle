@@ -23,6 +23,9 @@ apply from: 'gradle/docs.gradle'
 dependencies {
 
     compile "org.codehaus.groovy:groovy-all:${groovyVersion}"
+    compile "org.slf4j:slf4j-api:${slf4jVersion}"
+    compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
+    compile "ch.qos.logback:logback-classic:${logbackVersion}"
     compile "commons-io:commons-io:${commonsIOVersion}"
     compile "org.mortbay.jetty:jetty:${jettyVersion}"
 
@@ -38,10 +41,6 @@ sourceSets {
 
 configurations {
     all*.exclude group: 'commons-logging'
-    all*.exclude group: 'log4j'
-    all*.exclude module: 'slf4j-simple'
-    integrationTestCompile.extendsFrom testCompile
-    integrationTestRuntime.extendsFrom testRuntime
 }
 
 task wrapper(type: Wrapper) {

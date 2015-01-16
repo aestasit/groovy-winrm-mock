@@ -41,8 +41,7 @@ public class WinRMTestServer {
   public static final int HTTPS_PORT = 5986
 
   Server server
-  String responseBody
-  String requestBody
+  Map requestResponseMock = [:]
   String mockResponseData
 
   public void start(useHTTP) throws Exception {
@@ -55,8 +54,9 @@ public class WinRMTestServer {
     new AbstractHandler() {
       public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException, ServletException {
         Request baseRequest = request instanceof Request ? request : HttpConnection.currentConnection.request
-        responseBody = mockResponseData
         requestBody = IOUtils.toString(baseRequest.inputStream)
+
+        responseBody = mockResponseData
         response.status = SC_OK
         response.contentType = "text/xml;charset=utf-8"
         write responseBody, response.outputStream
