@@ -17,7 +17,6 @@
 package com.aestasit.infrastructure.winrm.mock
 
 import com.aestasit.infrastructure.winrm.mock.server.WinRMTestServer
-import groovy.util.slurpersupport.GPathResult
 
 /**
  * This class emulate WinRM host behaviour with HTTP and HTTPS for using in JUnit test
@@ -25,8 +24,6 @@ import groovy.util.slurpersupport.GPathResult
  * @author Sergey Korenko
  */
 class WinRMHostMock {
-//  static Map commands = [:]
-
   /** Http server that emulates WinRM host to check command execution*/
   static WinRMTestServer winRMServer
 
@@ -35,14 +32,14 @@ class WinRMHostMock {
    */
   static void startWinRMServer(int port) {
     winRMServer = new WinRMTestServer()
-//    winRMServer.start(WinRMTestServer.HTTP_PORT == port)
+    winRMServer.start(WinRMTestServer.HTTP_PORT == port)
   }
 
   /**
    * Stops running SSH server.
    */
   static void stopWinRMServer() {
-//    winRMServer?.stop()
+    winRMServer?.stop()
   }
 
   /**
@@ -51,28 +48,80 @@ class WinRMHostMock {
    * @param pattern command pattern to match
    * @param cl closure to execute for command.
    */
-  static void command(String pattern, Closure cl) {
-    decomposeExpectIntoRequestResponse(cl)
+  static void command(String command, int result, String output, String errorOutput) {
+    decomposeExpectIntoRequestResponse(command, result, output, errorOutput)
   }
-
 
   // each command execution is done in 4 steps:
   // 1. open WinRM shell - returns shellID
   // 2. execute command inside shell with shellID - returns commandID
   // 3. get command output inside shell with shellID by commandID
   // 4. close shell by shellID
-  static void decomposeExpectIntoRequestResponse(Closure cl){
-    // 1. mock open WinRM shell opening
-    def openShellRequestFragment = "<wsa:Action s:mustUnderstand='true'>http://schemas.xmlsoap.org/ws/2004/09/transfer/Create</wsa:Action>"
+  private static void decomposeExpectIntoRequestResponse(String command, int result, String output, String errorOutput){
+    mockOpenShell()
+    def commandID = mockExecuteCommand()
+    mockCommandOutput(commandID, result, output, errorOutput)
+    mockDeleteShell()
+  }
+
+  private static void mockOpenShell() {
     def shellID = UUID.randomUUID().toString().toUpperCase()
 
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/OpenShellResponse.xml').text
     def openShellResponse = new XmlParser().parseText(xmlText)
 
-    openShellResponse?.'*:Body'[0].'*:ResourceCreated'[0].'*:ReferenceParameters'[0].'*:SelectorSet'[0].'*:Selector'[0].value = shellID
-    def writer = new StringWriter()
-    new XmlNodePrinter(new PrintWriter(writer)).print(openShellResponse)
+    openShellResponse?.'*:Body'?.'*:ResourceCreated'?.'*:ReferenceParameters'?.'*:SelectorSet'?.'*:Selector'[0].value = shellID
 
-    winRMServer.requestResponseMock[openShellRequestFragment] = writer.toString()
+    def openShellRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.xmlsoap.org/ws/2004/09/transfer/Create</wsa:Action>"
+    winRMServer.requestResponseMock[openShellRequestKey] = getResponseString(openShellResponse)
+  }
+
+  private static String mockExecuteCommand() {
+    def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecuteCommandResponse.xml').text
+    def executeCommandResponse = new XmlParser().parseText(xmlText)
+
+    def commandID = UUID.randomUUID().toString().toUpperCase()
+    executeCommandResponse?.'*:Body'?.'*:CommandResponse'?.'*:CommandId'[0].value = commandID
+
+    def executeCommandRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.microsoft.com/wbem/wsman/1/windows/shell/Command</wsa:Action>"
+    winRMServer.requestResponseMock[executeCommandRequestKey] = getResponseString(executeCommandResponse)
+
+    commandID
+  }
+
+  private static void mockCommandOutput(String commandID, int result, String output, String errorOutput) {
+    def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecutionResultsResponse.xml').text
+    def executionResultsResponse = new XmlParser().parseText(xmlText)
+
+    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{!it.@CommandId.isEmpty()}?.each {it.@CommandId=commandID}
+    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:CommandState'[0].@CommandId=commandID
+
+    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:CommandState'?.'*:ExitCode'[0].value = result
+
+    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{it.@Name == 'stdout' && !it.@End}[0].value = output.bytes.encodeBase64().toString()
+    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{it.@Name == 'stderr' && !it.@End}[0].value = errorOutput.bytes.encodeBase64().toString()
+
+    def commandOutputRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.microsoft.com/wbem/wsman/1/windows/shell/Receive</wsa:Action>"
+    winRMServer.requestResponseMock[commandOutputRequestKey] = getResponseString(executionResultsResponse)
+  }
+
+  private static void mockDeleteShell() {
+    def deleteRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.xmlsoap.org/ws/2004/09/transfer/Delete</wsa:Action>"
+    def deleteShellResponse = WinRMHostMock.getClass().getResourceAsStream('/ExecutionResultsResponse.xml').text
+    winRMServer.requestResponseMock[deleteRequestKey] = deleteShellResponse
+  }
+
+  /**
+   * Returns string which represents xml
+   *
+   * @param node identified node of XML which has to be represented as String
+   * @return String
+   */
+  private static String getResponseString(Node node){
+    StringWriter writer = new StringWriter()
+    XmlNodePrinter nodePrinter = new XmlNodePrinter(new PrintWriter(writer),''){void printLineEnd() {} }
+    nodePrinter.print(node)
+
+    writer.toString()
   }
 }

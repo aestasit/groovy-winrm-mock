@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 
 import static javax.servlet.http.HttpServletResponse.SC_OK
+import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND
 import static org.apache.commons.io.IOUtils.write
 
 /**
@@ -37,35 +38,34 @@ import static org.apache.commons.io.IOUtils.write
  */
 public class WinRMTestServer {
 
-  public static final int HTTP_PORT = 5985
-  public static final int HTTPS_PORT = 5986
+  static final int HTTP_PORT = 5985
+  static final int HTTPS_PORT = 5986
 
   Server server
   Map requestResponseMock = [:]
-  String mockResponseData
 
-  public void start(useHTTP) throws Exception {
+  void start(useHTTP) throws Exception {
     server = new Server(useHTTP ? HTTP_PORT : HTTPS_PORT)
     server.handler = getMockHandler()
     server.start()
   }
 
-  public Handler getMockHandler() {
+  Handler getMockHandler() {
     new AbstractHandler() {
       public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException, ServletException {
         Request baseRequest = request instanceof Request ? request : HttpConnection.currentConnection.request
-        requestBody = IOUtils.toString(baseRequest.inputStream)
-
-        responseBody = mockResponseData
-        response.status = SC_OK
+        def requestBody = IOUtils.toString(baseRequest.inputStream)
+        def responseBody = requestResponseMock.find { requestBody.contains(it.key)}.value
+        response.status = responseBody ? SC_OK : SC_NOT_FOUND
         response.contentType = "text/xml;charset=utf-8"
         write responseBody, response.outputStream
+
         baseRequest.handled = true
       }
     }
   }
 
-  public void stop() throws Exception {
+  void stop() throws Exception {
     server.stop()
   }
 }

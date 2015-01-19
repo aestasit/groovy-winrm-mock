@@ -26,10 +26,9 @@
     </s:Header>
     <s:Body>
         <rsp:ReceiveResponse>
-            <rsp:Stream Name="stdout" CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB">DQo=</rsp:Stream>
-            <rsp:Stream Name="stdout" CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB">
-                TWljcm9zb2Z0IFdpbmRvd3MgW1ZlcnNpb24gNi4xLjc2MDFdDQo=
-            </rsp:Stream>
+            <rsp:Stream Name="stdout" CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB"></rsp:Stream>
+            <rsp:Stream Name="stderr" CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB"></rsp:Stream>
+
             <rsp:Stream Name="stdout" CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB" End="true"></rsp:Stream>
             <rsp:Stream Name="stderr" CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB" End="true"></rsp:Stream>
             <rsp:CommandState CommandId="6521B144-B2A2-4129-AE91-85D38F7B76BB"

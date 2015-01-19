@@ -11,11 +11,8 @@ class WinRMHostMockTest {
 
   @Test
   void commandMocking() {
-    WinRMHostMock.startWinRMServer(59859)
-    WinRMHostMock.command('whoami'){ exitStatus, output, exception ->
-      output = 'win-l9po57hvelf\\user'
-    }
-    println WinRMHostMock.winRMServer.requestResponseMock
+    WinRMHostMock.startWinRMServer(5985)
+    WinRMHostMock.command('whoami', 0, 'win-l9po57hvelf\\user', '')
     WinRMHostMock.stopWinRMServer()
   }
 }
