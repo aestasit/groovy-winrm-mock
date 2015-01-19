@@ -55,7 +55,7 @@ public class WinRMTestServer {
       public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException, ServletException {
         Request baseRequest = request instanceof Request ? request : HttpConnection.currentConnection.request
         def requestBody = IOUtils.toString(baseRequest.inputStream)
-        def responseBody = requestResponseMock.find { requestBody.contains(it.key)}.value
+        def responseBody = getResponseMockByRequest(requestBody)
         response.status = responseBody ? SC_OK : SC_NOT_FOUND
         response.contentType = "text/xml;charset=utf-8"
         write responseBody, response.outputStream
@@ -67,5 +67,9 @@ public class WinRMTestServer {
 
   void stop() throws Exception {
     server.stop()
+  }
+
+  String getResponseMockByRequest(def requestBody){
+    requestResponseMock.find { requestBody.contains(it.key)}?.value
   }
 }
