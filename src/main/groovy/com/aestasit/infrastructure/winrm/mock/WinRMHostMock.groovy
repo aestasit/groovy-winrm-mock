@@ -48,7 +48,7 @@ class WinRMHostMock {
    * @param pattern command pattern to match
    * @param cl closure to execute for command.
    */
-  static void command(String command, int result, String output, String errorOutput) {
+  static void command(String command, String[] args, int result, String output, String errorOutput) {
     decomposeExpectIntoRequestResponse(command, result, output, errorOutput)
   }
 
@@ -59,7 +59,7 @@ class WinRMHostMock {
   // 4. close shell by shellID
   private static void decomposeExpectIntoRequestResponse(String command, int result, String output, String errorOutput){
     mockOpenShell()
-    def commandID = mockExecuteCommand()
+    def commandID = mockExecuteCommand(command)
     mockCommandOutput(commandID, result, output, errorOutput)
     mockDeleteShell()
   }
@@ -76,14 +76,14 @@ class WinRMHostMock {
     winRMServer.requestResponseMock[openShellRequestKey] = getResponseString(openShellResponse)
   }
 
-  private static String mockExecuteCommand() {
+  private static String mockExecuteCommand(String command) {
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecuteCommandResponse.xml').text
     def executeCommandResponse = new XmlParser().parseText(xmlText)
 
     def commandID = UUID.randomUUID().toString().toUpperCase()
     executeCommandResponse?.'*:Body'?.'*:CommandResponse'?.'*:CommandId'[0].value = commandID
 
-    def executeCommandRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.microsoft.com/wbem/wsman/1/windows/shell/Command</wsa:Action>"
+    def executeCommandRequestKey = "<rsp:Command>${command}</rsp:Command>"
     winRMServer.requestResponseMock[executeCommandRequestKey] = getResponseString(executeCommandResponse)
 
     commandID
@@ -101,7 +101,7 @@ class WinRMHostMock {
     executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{it.@Name == 'stdout' && !it.@End}[0].value = output.bytes.encodeBase64().toString()
     executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{it.@Name == 'stderr' && !it.@End}[0].value = errorOutput.bytes.encodeBase64().toString()
 
-    def commandOutputRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.microsoft.com/wbem/wsman/1/windows/shell/Receive</wsa:Action>"
+    def commandOutputRequestKey = "<rsp:DesiredStream CommandId='${commandID}'>stdout stderr</rsp:DesiredStream>"
     winRMServer.requestResponseMock[commandOutputRequestKey] = getResponseString(executionResultsResponse)
   }
 
