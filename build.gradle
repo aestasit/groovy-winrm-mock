@@ -14,7 +14,7 @@ plugins {
 }
 
 group = 'com.aestasit.infrastructure.winrm'
-version = '0.2-SNAPSHOT'
+version = '0.2'
 
 apply from: 'gradle/repos.gradle'
 apply from: 'gradle/sonar.gradle'
