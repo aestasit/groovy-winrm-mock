@@ -27,7 +27,7 @@ dependencies {
     compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
     compile "ch.qos.logback:logback-classic:${logbackVersion}"
     compile "commons-io:commons-io:${commonsIOVersion}"
-    compile "org.mortbay.jetty:jetty:${jettyVersion}"
+    compile "org.eclipse.jetty:jetty-server:${jettyVersion}"
 
     testCompile "junit:junit:${junitVersion}"
 }

@@ -17,11 +17,18 @@
 package com.aestasit.infrastructure.winrm.mock.server
 
 import org.apache.commons.io.IOUtils
-import org.mortbay.jetty.Handler
-import org.mortbay.jetty.HttpConnection
-import org.mortbay.jetty.Request
-import org.mortbay.jetty.Server
-import org.mortbay.jetty.handler.AbstractHandler
+import org.eclipse.jetty.http.HttpVersion
+import org.eclipse.jetty.server.Connector
+import org.eclipse.jetty.server.HttpConfiguration
+import org.eclipse.jetty.server.HttpConnectionFactory
+import org.eclipse.jetty.server.Request
+import org.eclipse.jetty.server.SecureRequestCustomizer
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.Handler
+import org.eclipse.jetty.server.ServerConnector
+import org.eclipse.jetty.server.SslConnectionFactory
+import org.eclipse.jetty.server.handler.AbstractHandler
+import org.eclipse.jetty.util.ssl.SslContextFactory
 
 import javax.servlet.ServletException
 import javax.servlet.http.HttpServletRequest
@@ -44,16 +51,44 @@ public class WinRMTestServer {
   Server server
   Map requestResponseMock = [:]
 
-  void start(useHTTP) throws Exception {
-    server = new Server(useHTTP ? HTTP_PORT : HTTPS_PORT)
+  void start() throws Exception {
+    URL url = WinRMTestServer.getClass().getResource('/keystore')
+    if (!url) {
+      throw new FileNotFoundException('/keystore')
+    }
+
+    server = new Server();
+
+    HttpConfiguration http_config = new HttpConfiguration()
+    http_config.secureScheme = "https"
+    http_config.securePort = HTTPS_PORT
+
+    ServerConnector http = new ServerConnector(server, new HttpConnectionFactory(http_config))
+    http.port = HTTP_PORT
+    SslContextFactory sslContextFactory = new SslContextFactory()
+    sslContextFactory.with {
+      keyStorePath = url.toString()
+      keyStorePassword = "secret"
+    }
+
+    HttpConfiguration https_config = new HttpConfiguration(http_config)
+    https_config.addCustomizer(new SecureRequestCustomizer())
+
+    ServerConnector https = new ServerConnector(server,
+      new SslConnectionFactory(sslContextFactory,HttpVersion.HTTP_1_1.asString()),
+      new HttpConnectionFactory(https_config))
+    https.port = HTTPS_PORT
+
+    server.setConnectors([http, https] as Connector[] )
+
     server.handler = getMockHandler()
     server.start()
   }
 
   Handler getMockHandler() {
     new AbstractHandler() {
-      public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException, ServletException {
-        Request baseRequest = request instanceof Request ? request : HttpConnection.currentConnection.request
+      @Override
+      void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         def requestBody = IOUtils.toString(baseRequest.inputStream)
         def responseBody = getResponseMockByRequest(requestBody)
         response.status = responseBody ? SC_OK : SC_NOT_FOUND

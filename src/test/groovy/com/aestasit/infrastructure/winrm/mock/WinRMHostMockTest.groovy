@@ -27,10 +27,12 @@ class WinRMHostMockTest {
 
   @Test
   void commandMocking() {
-    WinRMHostMock.startWinRMServer(5985)
+    WinRMHostMock.startWinRMServer()
     WinRMHostMock.command('whoami', [] as String[], 0, 'server name', '')
     WinRMHostMock.command('ipconfig', [] as String[], 0, 'ip data', '')
     WinRMHostMock.command('dir', [] as String[], 0, 'some dir info', '')
+    WinRMHostMock.command('commmand', [] as String[], 0, 'some command output', null)
+    WinRMHostMock.command('cmd', [] as String[], 1, null, 'Some error text')
     WinRMHostMock.stopWinRMServer()
   }
 }

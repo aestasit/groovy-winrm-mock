@@ -30,9 +30,9 @@ class WinRMHostMock {
   /**
    * Starts SSH server.
    */
-  static void startWinRMServer(int port) {
+  static void startWinRMServer() {
     winRMServer = new WinRMTestServer()
-    winRMServer.start(WinRMTestServer.HTTP_PORT == port)
+    winRMServer.start()
   }
 
   /**
@@ -49,17 +49,13 @@ class WinRMHostMock {
    * @param cl closure to execute for command.
    */
   static void command(String command, String[] args, int result, String output, String errorOutput) {
-    decomposeExpectIntoRequestResponse(command, result, output, errorOutput)
-  }
-
-  // each command execution is done in 4 steps:
-  // 1. open WinRM shell - returns shellID
-  // 2. execute command inside shell with shellID - returns commandID
-  // 3. get command output inside shell with shellID by commandID
-  // 4. close shell by shellID
-  private static void decomposeExpectIntoRequestResponse(String command, int result, String output, String errorOutput){
+    // each command execution is done in 4 steps:
+    // 1. open WinRM shell - returns shellID
+    // 2. execute command inside shell with shellID - returns commandID
+    // 3. get command output inside shell with shellID by commandID
+    // 4. close shell by shellID
     mockOpenShell()
-    def commandID = mockExecuteCommand(command)
+    def commandID = mockExecuteCommand(command, args)
     mockCommandOutput(commandID, result, output, errorOutput)
     mockDeleteShell()
   }
@@ -70,18 +66,18 @@ class WinRMHostMock {
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/OpenShellResponse.xml').text
     def openShellResponse = new XmlParser().parseText(xmlText)
 
-    openShellResponse?.'*:Body'?.'*:ResourceCreated'?.'*:ReferenceParameters'?.'*:SelectorSet'?.'*:Selector'[0].value = shellID
+    openShellResponse.'*:Body'.'*:ResourceCreated'.'*:ReferenceParameters'.'*:SelectorSet'.'*:Selector'[0].value = shellID
 
     def openShellRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.xmlsoap.org/ws/2004/09/transfer/Create</wsa:Action>"
     winRMServer.requestResponseMock[openShellRequestKey] = getResponseString(openShellResponse)
   }
 
-  private static String mockExecuteCommand(String command) {
+  private static String mockExecuteCommand(String command, String[] args) {
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecuteCommandResponse.xml').text
     def executeCommandResponse = new XmlParser().parseText(xmlText)
 
     def commandID = UUID.randomUUID().toString().toUpperCase()
-    executeCommandResponse?.'*:Body'?.'*:CommandResponse'?.'*:CommandId'[0].value = commandID
+    executeCommandResponse.'*:Body'.'*:CommandResponse'.'*:CommandId'[0].value = commandID
 
     def executeCommandRequestKey = "<rsp:Command>${command}</rsp:Command>"
     winRMServer.requestResponseMock[executeCommandRequestKey] = getResponseString(executeCommandResponse)
@@ -93,13 +89,13 @@ class WinRMHostMock {
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecutionResultsResponse.xml').text
     def executionResultsResponse = new XmlParser().parseText(xmlText)
 
-    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{!it.@CommandId.isEmpty()}?.each {it.@CommandId=commandID}
-    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:CommandState'[0].@CommandId=commandID
+    executionResultsResponse.'*:Body'.'*:ReceiveResponse'.'*:Stream'.findAll{!it.@CommandId.isEmpty()}?.each {it.@CommandId=commandID}
+    executionResultsResponse.'*:Body'.'*:ReceiveResponse'.'*:CommandState'[0].@CommandId=commandID
 
-    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:CommandState'?.'*:ExitCode'[0].value = result
+    executionResultsResponse.'*:Body'.'*:ReceiveResponse'.'*:CommandState'.'*:ExitCode'[0].value = result
 
-    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{it.@Name == 'stdout' && !it.@End}[0].value = output.bytes.encodeBase64().toString()
-    executionResultsResponse?.'*:Body'?.'*:ReceiveResponse'?.'*:Stream'?.findAll{it.@Name == 'stderr' && !it.@End}[0].value = errorOutput.bytes.encodeBase64().toString()
+    executionResultsResponse.'*:Body'.'*:ReceiveResponse'.'*:Stream'.findAll{it.@Name == 'stdout' && !it.@End}[0].value = output?.bytes?.encodeBase64()?.toString()
+    executionResultsResponse.'*:Body'.'*:ReceiveResponse'.'*:Stream'.findAll{it.@Name == 'stderr' && !it.@End}[0].value = errorOutput?.bytes?.encodeBase64()?.toString()
 
     def commandOutputRequestKey = "<rsp:DesiredStream CommandId='${commandID}'>stdout stderr</rsp:DesiredStream>"
     winRMServer.requestResponseMock[commandOutputRequestKey] = getResponseString(executionResultsResponse)
