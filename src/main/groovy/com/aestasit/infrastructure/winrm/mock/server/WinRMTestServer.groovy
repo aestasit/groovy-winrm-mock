@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Aestas/IT
+ * Copyright (C) 2011-2020 Aestas/IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.aestasit.infrastructure.winrm.mock.server
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import org.apache.commons.io.IOUtils
 import org.eclipse.jetty.http.HttpVersion
 import org.eclipse.jetty.server.Connector
@@ -43,7 +44,8 @@ import static org.apache.commons.io.IOUtils.write
  *
  * @author Sergey Korenko
  */
-public class WinRMTestServer {
+@CompileStatic
+class WinRMTestServer {
 
   static final int HTTP_PORT = 5985
   static final int HTTPS_PORT = 5986
@@ -52,7 +54,7 @@ public class WinRMTestServer {
   Map requestResponseMock = [:]
 
   void start() throws Exception {
-    URL url = WinRMTestServer.getClass().getResource('/keystore')
+    URL url = WinRMTestServer.class.getResource('/keystore')
     if (!url) {
       throw new FileNotFoundException('/keystore')
     }
@@ -104,6 +106,7 @@ public class WinRMTestServer {
     server.stop()
   }
 
+  @CompileDynamic
   String getResponseMockByRequest(def requestBody){
     requestResponseMock.find { requestBody.contains(it.key)}?.value
   }

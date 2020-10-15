@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Aestas/IT
+ * Copyright (C) 2011-2020 Aestas/IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,16 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.aestasit.infrastructure.winrm.mock
 
 import com.aestasit.infrastructure.winrm.mock.server.WinRMTestServer
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 
 /**
  * This class emulate WinRM host behaviour with HTTP and HTTPS for using in JUnit test
  *
  * @author Sergey Korenko
  */
+@CompileStatic
 class WinRMHostMock {
   /** Http server that emulates WinRM host to check command execution*/
   static WinRMTestServer winRMServer
@@ -60,6 +62,7 @@ class WinRMHostMock {
     mockDeleteShell()
   }
 
+  @CompileDynamic
   private static void mockOpenShell() {
     def shellID = UUID.randomUUID().toString().toUpperCase()
 
@@ -72,6 +75,7 @@ class WinRMHostMock {
     winRMServer.requestResponseMock[openShellRequestKey] = getResponseString(openShellResponse)
   }
 
+  @CompileDynamic
   private static String mockExecuteCommand(String command, String[] args) {
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecuteCommandResponse.xml').text
     def executeCommandResponse = new XmlParser().parseText(xmlText)
@@ -85,6 +89,7 @@ class WinRMHostMock {
     commandID
   }
 
+  @CompileDynamic
   private static void mockCommandOutput(String commandID, int result, String output, String errorOutput) {
     def xmlText = WinRMHostMock.getClass().getResourceAsStream('/ExecutionResultsResponse.xml').text
     def executionResultsResponse = new XmlParser().parseText(xmlText)
@@ -103,7 +108,7 @@ class WinRMHostMock {
 
   private static void mockDeleteShell() {
     def deleteRequestKey = "<wsa:Action s:mustUnderstand='true'>http://schemas.xmlsoap.org/ws/2004/09/transfer/Delete</wsa:Action>"
-    def deleteShellResponse = WinRMHostMock.getClass().getResourceAsStream('/ExecutionResultsResponse.xml').text
+    def deleteShellResponse = WinRMHostMock.class.getResourceAsStream('/ExecutionResultsResponse.xml').text
     winRMServer.requestResponseMock[deleteRequestKey] = deleteShellResponse
   }
 

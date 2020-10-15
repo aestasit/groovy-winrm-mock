@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Aestas/IT
+ * Copyright (C) 2011-2020 Aestas/IT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.aestasit.infrastructure.winrm.mock
 
+import groovy.transform.CompileStatic
 import org.junit.Test
 
 /**
@@ -23,6 +23,7 @@ import org.junit.Test
  *
  * @author Sergey Korenko
  */
+@CompileStatic
 class WinRMHostMockTest {
 
   @Test
